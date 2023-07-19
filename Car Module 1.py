@@ -1,24 +1,24 @@
 import time
 import random
-from Adafruit_IO import MQTTClient
 
-# Extra function:
-
-# Change the value
+# # Extra funtion:
+# 1. Change the value
 def value_change(first_value, last_value):
-    change_speed_value = (last_value - first_value)/4
-    first_value += change_speed_value
+    if (first_value - last_value) < 0.5:
+        first_value = last_value
+    else:
+        change_speed_value = (last_value - first_value)/4
+        first_value += change_speed_value
     return first_value
-
-# Check the meet of the case
-def test_case(distance, check_value, LP, num_case):
-    if distance > check_value*LP[num_case][1]:
-        LP[num_case][1] += 1
+# 2. Check if the case meets the conditons: 
+def test_case(data, check_value, LP, num_case):
+    ratio = data/(check_value*LP[num_case][1])
+    if ratio > 1:
+        LP[num_case][1] += int(ratio)
         return True
     else: 
         return False  
-
-# Check the condtions to print the problem
+# 3. Check the condtions to print the problem
 def test_to_append(result, case, *arg):
     all_condition = all(arg)
     if all_condition:
@@ -38,7 +38,7 @@ class Car:
         self.fuel_sensor = random.randint(0,100)            # Sensor for fuel measuring
         self.exp_AC_temp = random.randint(20,25)            # Random an ideal temperature in cabin for the driver
         self.ECT_lock = False                               # Lock the first value of ECT when it comes to pass the standard value (75 oC)
-        self.distance = 0                                   # Store distance from the main program
+        self.distance = 0                                   # Store distance from the main program                         
         self.car_problem = ["---"]                          # Store car_problem alert
         self.PC = [                                         # Car problem list and times when the car meets the problem during the trip
             ["Overheating", 1],
@@ -61,26 +61,13 @@ class Car:
         self.engine_status = 0
         print(f"Power OFF")
         print(f'AC is off')
-    
-    # Return the speed value
-    def speed(self):
-        return self.speed_sensor
-    # Return the temperature of engine
-    def ECT(self):
-        return self.ECT_sensor
-    # Return the temperature in the cabin
-    def cabin_temp(self):
-        return self.cab_temp_sensor
-    # Return the level of remain fuel 
-    def fuel(self):
-        return self.fuel_sensor
-    # Return the DCT
-    def car_issue(self):
-        return self.car_problem
+
     # Pass the distance value into Car class:
-    def distance_receiver(self, total_distance):
-        self.distance = total_distance
-    # Diagnose Trouble Code
+    def distance_receiver(self, origin_distance):
+        self.distance = origin_distance
+
+    # # Update Processing
+    # 1. Diagnose Trouble Code
     def DTC(self):
         # Simulate a diagnosis check
         new_problems = []
@@ -88,11 +75,11 @@ class Car:
         test_to_append(new_problems, self.PC[0][0], self.ECT_sensor > 120)
         test_to_append(new_problems, self.PC[1][0], self.fuel_sensor < 20, self.fuel_sensor > 0)
         test_to_append(new_problems, self.PC[2][0], self.fuel_sensor == 0 )
-        test_to_append(new_problems, self.PC[3][0], test_case(self.distance, 100, self.PC, 3))
-        test_to_append(new_problems, self.PC[4][0], test_case(self.distance, 200, self.PC, 4))
-        test_to_append(new_problems, self.PC[5][0], test_case(self.distance, 150, self.PC, 5))
-        test_to_append(new_problems, self.PC[6][0], test_case(self.distance, 300, self.PC, 6))
-        test_to_append(new_problems, self.PC[7][0], test_case(self.distance, 350, self.PC, 7))
+        test_to_append(new_problems, self.PC[3][0], test_case(self.distance, 200, self.PC, 3))
+        test_to_append(new_problems, self.PC[4][0], test_case(self.distance, 400, self.PC, 4))
+        test_to_append(new_problems, self.PC[5][0], test_case(self.distance, 600, self.PC, 5))
+        test_to_append(new_problems, self.PC[6][0], test_case(self.distance, 800, self.PC, 6))
+        test_to_append(new_problems, self.PC[7][0], test_case(self.distance, 875, self.PC, 7))
         test_to_append(new_problems, self.PC[8][0], self.ECT_sensor < 75)
 
         # Add new problems to the list
@@ -105,8 +92,7 @@ class Car:
         # Delete the empty sign
         if len(self.car_problem) > 1 and ("---" in self.car_problem):
             self.car_problem.remove("---")
-
-    # Fuel_lossing_process
+    # 2. Fuel_lossing_process
     def fuel_update(self):
         # Fuel consumption constants based on speed, AC, and temperature
         speed_consumption_rate = 0.015 
@@ -132,15 +118,13 @@ class Car:
         # Ensure remaining fuel is not negative
         if self.fuel_sensor < 0:
             self.fuel_sensor = 0
-    
-    # AC_controller:
+    # 3. AC_controller:
     def AC_update(self):
         if self.engine_status == 1:
             self.cab_temp_sensor = value_change(self.cab_temp_sensor, self.exp_AC_temp)
         else:
             self.cab_temp_sensor = value_change(self.cab_temp_sensor, self.ex_temp_sensor + 10)
-
-    # Speed_generator
+    # 4. Speed_generator
     def speed_update(self): 
         acceleration = self.time_elapsed            # Acceleration value (2 km/h^2)
         deceleration = 2 * self.time_elapsed        # Deceleration value (1 km/h^2)
@@ -154,8 +138,7 @@ class Car:
             if self.speed_sensor >= deceleration:
                 self.speed_sensor -= deceleration
             else: self.speed_sensor = 0
-
-    # Temperature_of_car_engine(ECT)
+    # 5. Temperature_of_car_engine(ECT)
     def ECT_update(self):
         cooling_rate = 0.1              # Cooling rate per unit of time
         temp_increase_above_75 = 0.2    # Base temperature increase per unit of speed
@@ -168,21 +151,52 @@ class Car:
                     if self.ECT_sensor > 100:
                         self.ECT_sensor = random.randint(75,100)
                     self.ECT_initial = self.ECT_sensor
-                    self.car_problem.remove("Warming up")
+                    if "Warming up" in self.car_problem:
+                        self.car_problem.remove("Warming up")
+                    if len(self.car_problem) == 0:
+                        self.car_problem.append("---") 
                 self.ECT_sensor = self.ECT_initial + temp_increase_above_75 * self.speed_sensor - cooling_rate * self.time_elapsed 
             else: 
                 self.ECT_sensor += warming_index * self.time_elapsed
         else:
             self.ECT_sensor = value_change(self.ECT_sensor, self.ex_temp_sensor)
-
-    # Update the engine status
+    # 6. Totall Distance
+    def distance_update(self):
+        self.distance += self.speed_sensor * (self.time_elapsed/80)
+    # 7. Update the engine status
     def update(self):
         self.fuel_update()
         self.AC_update()
         self.ECT_update()
         self.DTC()
+        self.distance_update()
         self.speed_update()
+
+    # # Return the car values
+    # 1. Return the speed value
+    def speed(self):
+        return self.speed_sensor
+    # 2. Return the temperature of engine
+    def ECT(self):
+        return self.ECT_sensor
+    # 3. Return the temperature in the cabin
+    def cabin_temp(self):
+        return self.cab_temp_sensor
+    # 4. Return the level of remain fuel 
+    def fuel(self):
+        return self.fuel_sensor
+    # 5. Return the DCT
+    def car_issue(self):
+        return self.car_problem
+    # 6. Return the distance update:
+    def totall_distance(self):
+        return self.distance
         
+
+
+
+
+
 # Set the car environment
 car = Car()
 distance = 0                                                        # Can be adjusted (received from Adafruit)
