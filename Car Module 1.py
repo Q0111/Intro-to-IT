@@ -1,5 +1,4 @@
 import time
-import sys
 import random
 from Adafruit_IO import MQTTClient
 
@@ -184,5 +183,74 @@ class Car:
         self.DTC()
         self.speed_update()
         
-# Adafruit sign up:
+# Set the car environment
+car = Car()
+distance = 0                                                        # Can be adjusted (received from Adafruit)
+start_time = 0
+end_time = 0
+
+# Turn on the engine
+car.turn_on()
+run = True
+
+# Run Processing
+while run:
+
+    # Time durations for the previous car run:
+    car.time_elapsed = end_time - start_time
+
+    # Set the start time:
+    start_time = time.time()
+
+    # Calculate distance:
+    distance += car.speed_sensor * (car.time_elapsed/60)
+    car.distance_receiver(distance)
+
+    # Update car data
+    car.update()
+
+    
+    # Print current data
+    print(f"Speed: {car.speed()} km/h")
+    print(f"ECT: {car.ECT()} °C")
+    print(f"External temperature: {car.ex_temp_sensor}")
+    print(f"Fuel: {car.fuel()}%")
+    print(f"Total distance: {car.distance} km")
+    print(f"Diagnosis: {car.car_issue()}")
+
+    # Check if any problems were fixed or appear
+    if ("---" not in car.car_problem): 
+        response = input(f"Did you fix the problem'? Y/N: ")
+        if response == "Y":
+            car.car_problem.clear()
+            car.car_problem.append("---")
+    
+    # Check if the user want to stop the car:
+    ask = input("Do you want to stop the car Y/N: ")
+    if ask == "Y":
+        car.turn_off()
+        run = False
+    
+    # Set the end time
+    end_time = time.time() 
+
+    print("------------------------------------------------------------")
+
+# Stop Processing
+while car.speed() > 0: 
+    
+    # Calculate distance:
+    distance += car.speed_sensor * (3/60)
+    car.distance_receiver(distance)
+    
+    # Update car data
+    car.update()
+    # Print current data
+    print(f"Speed: {car.speed()} km/h")
+    print(f"ECT: {car.ECT()} °C")
+    print(f"External temperature: {car.ex_temp_sensor}")
+    print(f"Fuel: {car.fuel()}%")
+    print(f"Diagnosis: {car.car_issue()}")
+    print("-----------------------------------------------------------")
+    time.sleep(3)
 
