@@ -5,8 +5,8 @@ import sys
 from Adafruit_IO import MQTTClient
 import requests
 
-AIO_USERNAME = "Steve12345"
-AIO_KEY = "aio_GUKl86xU0A7MrnDsuq9qyK8Inz1E"
+AIO_USERNAME = "---"
+AIO_KEY = "---"
 
 global_equation = ''
 
