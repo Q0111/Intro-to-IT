@@ -24,8 +24,10 @@ def connected(client):
 def disconnected(client):
     print("Disconnected from the server!!!")
     sys.exit (1)
+
 def message(client , feed_id , payload,): # Send the message when an upcoming message is taken place
     print(f"Recent message recieved from feed {feed_id}: {payload}")
+'''
     if feed_id == "AC_Adjust":
         if  int(payload) != car.exp_AC_temp:
             car.exp_AC_temp = int(payload)
@@ -45,7 +47,7 @@ def message(client , feed_id , payload,): # Send the message when an upcoming me
             else:
                 car.car_problem.clear()
                 car.car_problem.append("---")
-
+'''
 # # Extra funtion:    
 # 1. Query the lastest data from a feed
 def query_latest_data(aio_url, raw): 
@@ -83,7 +85,7 @@ while True:                             # Keep the program run with the server
     
     # Receive the latest data from feed "AC_adjust"
     aio_url = "https://io.adafruit.com/api/v2/Steve12345/feeds/ac-adjust" # Add the valid information here
-    latest_value = query_latest_data(aio_url)
+    latest_value = query_latest_data(aio_url, False)
     print (f"Latest value is: {latest_value}")
     
     time.sleep(10)
