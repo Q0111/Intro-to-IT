@@ -188,8 +188,8 @@ def check_rep(list,check_list):
 
 
 # Set the client registration for "client"
-AIO_USERNAME = "Steve12345"                       # Add the valid information here
-AIO_KEY = "aio_BvjC703OkexDujAHe4xh19dn8lpB"      # Add the valid information here
+AIO_USERNAME = "---"                       # Add the valid information here
+AIO_KEY = "---"      # Add the valid information here
 client = MQTTClient(AIO_USERNAME, AIO_KEY)
 
 # Set procedure when one of those codes is executed 
