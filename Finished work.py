@@ -131,10 +131,9 @@ def subscribe(client , userdata , mid , granted_qos):
     print("Subscribe!!!")
 def connected(client):
     print("Server connected ...")
-    # Subscribe feed here (This is just the example, please adjusting to be suitable to your account):
     global feeds 
-    feeds = {"AC_Adjust": 0,                # Thay the cac string trong day thanh ten cac feed cua ban, giu nguyen so 0 
-            "Cabin_Temp_sensor": 0,         # Kiem tra o cau lenh duoi neu co lien quan den dictionary nay thi thay doi ten key.
+    feeds = {"AC_Adjust": 0,                
+            "Cabin_Temp_sensor": 0,         
             "Car_problem": 0, 
             "Fuel_sensor": 0, 
             "Distance": 0, 
@@ -147,7 +146,7 @@ def connected(client):
 def disconnected(client):
     print("Disconnected from the server!!!")
     sys.exit (1)
-def message(client , feed_id , payload,): # Send the message when an upcoming message is taken place
+def message(client , feed_id , payload,): 
     print(f"Recent message recieved from feed {feed_id}: {payload}")
     
     if feed_id == "AC_Adjust":
@@ -180,7 +179,6 @@ def query_latest_data(aio_url, raw):
     else:
         latest_data = raw_data["last_value"]
         return latest_data
-# 2. Check if there is a repetition between the sending data and existed data:
 def check_rep(list,check_list):
     for key in list:
         if list[key] != check_list[key]:
@@ -189,28 +187,27 @@ def check_rep(list,check_list):
 
 # Set the client registration for "client"
 AIO_USERNAME = "---"                       # Add the valid information here
-AIO_KEY = "---"      # Add the valid information here
+AIO_KEY = "---"                            # Add the valid information here
 client = MQTTClient(AIO_USERNAME, AIO_KEY)
 
 # Set procedure when one of those codes is executed 
 client.on_connect = connected            
 client.on_disconnect = disconnected     
-client.on_message = message             # Supervise the upcomming message and send the message when it comes
-client.on_subscribe = subscribe         # Subscribe to the feed
+client.on_message = message             
+client.on_subscribe = subscribe         
 
-client.connect()  # Connect to the server 
-# Keep connecting to the server and receiving the upcomming message from the server
+client.connect()   r
 client.loop_background()
 
 # # Set up for car module:
 # 1. Python Module
 car = Car()
 car.turn_on()
-origin_distance = float(query_latest_data("https://io.adafruit.com/api/v2/Steve12345/feeds/distance", raw = False))
+origin_distance = float(query_latest_data("https://io.adafruit.com/api/v2/Steve12345/feeds/distance", raw = False)) # Link trong () mọi người thay thế bằng API feed "Distance" của mọi người nha
 car.distance_receiver(origin_distance)
 
 # 2. MQTT Module
-url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds"
+url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds" # Link này mọi người cùng dùng link feed "Distance" của mọi người nhưng xóa "/distance" ở sau đi nha 
 
 while True:
     # Power On
