@@ -5,6 +5,7 @@ import random
 from Adafruit_IO import MQTTClient
 import requests
 
+# Module Car for Simulation: 
 class Car:
     def __init__(self):
         self.time_elapsed = 0
@@ -36,7 +37,9 @@ class Car:
 
     def distance_receiver(self, origin_distance):
         self.distance = 0 if origin_distance > 1000 else origin_distance 
-# # Proccessing data
+    
+    # ---- Simulate the operating of Car ------
+    # DTC - Alert the driver for current car problem: Low fuel, Overheated Engine, ...
     def DTC(self):
         new_problem =[] 
         if self.ECT_sensor > 120:
@@ -68,7 +71,8 @@ class Car:
         speed_consumption += temp_consumption_rate * max(0, self.ECT_sensor - 75) 
         self.fuel_sensor = self.fuel_sensor - speed_consumption if (self.fuel_sensor > speed_consumption_rate) else 0
 
-    def CT_update(self): # Cabin temp update
+    # Update the cabin temperature:
+    def CT_update(self): 
         if self.engine_status == 1:
             self.cab_temp_sensor = self._value_change(self.cab_temp_sensor, self.exp_AC)
         else:
@@ -82,6 +86,7 @@ class Car:
         else:       
             self.speed_sensor = max(0, self.speed_sensor - deceleration)
 
+    # Update the car's engine temperature:
     def ECT_update(self):
         cooling_rate = 0.1
         temp_increase = 0.2
@@ -99,6 +104,7 @@ class Car:
     def distance_update(self):
         self.distance += self.speed_sensor * (self.time_elapsed / 80)
 
+    # Function for trigger car's sensor and status update:
     def update(self):
         self.ECT_update()
         self.speed_update()
@@ -106,6 +112,7 @@ class Car:
         self.CT_update()
         self.distance_update()
         self.DTC()
+    
     # Print the car value: 
     def speed(self):
         return self.speed_sensor
@@ -119,6 +126,7 @@ class Car:
         return list(self.car_problem)
     def totall_distance(self):
         return self.distance
+    
     # Supportive function
     @staticmethod
     def _value_change(first_value, last_value):
@@ -127,8 +135,10 @@ class Car:
         change_speed_value = (last_value - first_value) / 4
         return first_value + change_speed_value
 
+# --- Methods support for Adafruit connection ----
 def subscribe(client , userdata , mid , granted_qos):
     print("Subscribe!!!")
+    
 def connected(client):
     print("Server connected ...")
     global feeds 
@@ -143,9 +153,12 @@ def connected(client):
             "Problem_indicator": 0} 
     for key in feeds:
             client.subscribe(key)
+        
 def disconnected(client):
     print("Disconnected from the server!!!")
     sys.exit (1)
+
+# Processing Payload Receiving
 def message(client , feed_id , payload,): 
     print(f"Recent message recieved from feed {feed_id}: {payload}")
     
@@ -167,8 +180,9 @@ def message(client , feed_id , payload,):
                 car.car_problem.add("None")
     else: None
 
-# # Extra funtion:    
-# 1. Query the lastest data from a feed
+# --- Support Function ---
+
+# Query the lastest data from a feed:
 def query_latest_data(aio_url, raw): 
     headers = {}
     # Remember to public your feed before running!!!
@@ -179,6 +193,7 @@ def query_latest_data(aio_url, raw):
     else:
         latest_data = raw_data["last_value"]
         return latest_data
+
 def check_rep(list,check_list):
     for key in list:
         if list[key] != check_list[key]:
@@ -186,28 +201,29 @@ def check_rep(list,check_list):
 
 
 # Set the client registration for "client"
-AIO_USERNAME = "---"                       # Add the valid information here
-AIO_KEY = "---"                            # Add the valid information here
+AIO_USERNAME = "---"                       # Input user's id
+AIO_KEY = "---"                            # Input AIO_key
 client = MQTTClient(AIO_USERNAME, AIO_KEY)
 
-# Set procedure when one of those codes is executed 
+# Setup the Adafruit connection configuration: 
 client.on_connect = connected            
 client.on_disconnect = disconnected     
 client.on_message = message             
 client.on_subscribe = subscribe         
 
-client.connect()   r
+client.connect() 
 client.loop_background()
 
-# # Set up for car module:
-# 1. Python Module
+# Set an instance of Car Module
 car = Car()
 car.turn_on()
+
+# Retrieve the latest total distance record from the Dashboard
 origin_distance = float(query_latest_data("https://io.adafruit.com/api/v2/Steve12345/feeds/distance", raw = False))
 car.distance_receiver(origin_distance)
 
-# 2. MQTT Module
-url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds" 
+# MQTT Module
+url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds"     # Link to feeds' board of the user account 
 
 while True:
     # Power On
@@ -285,7 +301,7 @@ while True:
         break
     time.sleep(15)
 
-# Disconnect to server:
+# Reset the default value and Disconnect to Dashboard:
 client.publish("AC_Adjust",0)
 client.publish("Cabin_Temp_sensor",0)
 client.publish("Car_problem","None")
