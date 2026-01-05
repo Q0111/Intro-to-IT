@@ -199,6 +199,7 @@ def check_rep(list,check_list):
         if list[key] != check_list[key]:
             client.publish(key, list[key])
 
+# --- Connection Configuration and Intial Setup ---
 
 # Set the client registration for "client"
 AIO_USERNAME = "---"                       # Input user's id
