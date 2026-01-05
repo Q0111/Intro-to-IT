@@ -5,10 +5,11 @@ import random
 from Adafruit_IO import MQTTClient
 import requests
 
-# Module Car for Simulation: 
+# ========== Module Car for Simulation ========== 
+# The 'Car' class encapsulates the state (speed, fuel, temp) and behavior of a physical car.
 class Car:
     def __init__(self):
-        self.time_elapsed = 0
+        self.time_elapsed = 0                                # Time duration fo
         self.engine_status = 0
         self.speed_sensor = 0
         self.exp_speed = random.randint(0, 240)
@@ -20,11 +21,9 @@ class Car:
         self.exp_AC = random.randint(20, 25)
         self.distance = 0
         self.car_problem = set()
-        self.PC = ["Overheat",
-                   "Low fuel", 
-                   "Out of fuel", 
-                   "Warming up"]
+        self.PC = ["Overheat", "Low fuel", "Out of fuel", "Warming up"]
 
+    # ---- Simulate the operating of Car ------
     def turn_on(self):
         self.engine_status = 1
         print('Power ON')
@@ -38,8 +37,7 @@ class Car:
     def distance_receiver(self, origin_distance):
         self.distance = 0 if origin_distance > 1000 else origin_distance 
     
-    # ---- Simulate the operating of Car ------
-    # DTC - Alert the driver for current car problem: Low fuel, Overheated Engine, ...
+    # DTC (Diagnostic Trouble Code) - Alert the driver for current car problem: Low fuel, Overheated Engine, ...
     def DTC(self):
         new_problem =[] 
         if self.ECT_sensor > 120:
@@ -62,7 +60,7 @@ class Car:
         else: 
             self.car_problem.discard("None")
 
-
+    # Physics simulation: Calculating consumption based on speed and AC usage
     def fuel_update(self):
         speed_consumption_rate = 0.0015 * self.time_elapsed
         AC_consumption_rate = 0.0009 * self.time_elapsed
@@ -78,6 +76,7 @@ class Car:
         else:
             self.cab_temp_sensor = self._value_change(self.cab_temp_sensor, self.ex_temp_sensor + 10)
 
+    # Simulate the acceleration motion and send speed value to sensor
     def speed_update(self): 
         acceleration = self.time_elapsed
         deceleration = 2 * self.time_elapsed
@@ -104,7 +103,7 @@ class Car:
     def distance_update(self):
         self.distance += self.speed_sensor * (self.time_elapsed / 80)
 
-    # Function for trigger car's sensor and status update:
+    # Update car's status - Advances the simulation by one "tick", updating all subsystems.
     def update(self):
         self.ECT_update()
         self.speed_update()
@@ -113,7 +112,7 @@ class Car:
         self.distance_update()
         self.DTC()
     
-    # Print the car value: 
+    # Return the car sensor's value: 
     def speed(self):
         return self.speed_sensor
     def ECT(self):
@@ -127,7 +126,7 @@ class Car:
     def totall_distance(self):
         return self.distance
     
-    # Supportive function
+    # Supportive function: Smoothing function to make changes gradual rather than instant
     @staticmethod
     def _value_change(first_value, last_value):
         if abs(first_value - last_value) < 0.5:
@@ -135,7 +134,7 @@ class Car:
         change_speed_value = (last_value - first_value) / 4
         return first_value + change_speed_value
 
-# --- Methods support for Adafruit connection ----
+# ========== Methods support for Adafruit connection ==========
 def subscribe(client , userdata , mid , granted_qos):
     print("Subscribe!!!")
     
@@ -158,7 +157,7 @@ def disconnected(client):
     print("Disconnected from the server!!!")
     sys.exit (1)
 
-# Processing Payload Receiving
+# Processing Payload Receiving: handles messages coming FROM the Dashboard's interactions TO the car (e.g., user adjusting AC on dashboard)
 def message(client , feed_id , payload,): 
     print(f"Recent message recieved from feed {feed_id}: {payload}")
     
@@ -180,7 +179,7 @@ def message(client , feed_id , payload,):
                 car.car_problem.add("None")
     else: None
 
-# --- Support Function ---
+# ========== Support Function ==========
 
 # Query the lastest data from a feed:
 def query_latest_data(aio_url, raw): 
@@ -194,12 +193,13 @@ def query_latest_data(aio_url, raw):
         latest_data = raw_data["last_value"]
         return latest_data
 
+# Check repetiton: Checks if the local simulation data ('list') differs from the server data ('check_list'), only publishes if there is a change -> saves bandwidth and reduces API calls
 def check_rep(list,check_list):
     for key in list:
         if list[key] != check_list[key]:
             client.publish(key, list[key])
 
-# --- Connection Configuration and Intial Setup ---
+# ========== Connection Configuration and Intial Setup ==========
 
 # Set the client registration for "client"
 AIO_USERNAME = "---"                       # Input user's id
@@ -213,7 +213,8 @@ client.on_message = message
 client.on_subscribe = subscribe         
 
 client.connect() 
-client.loop_background()
+# Starts a background thread to handle MQTT network traffic automatically
+client.loop_background()                 
 
 # Set an instance of Car Module
 car = Car()
@@ -226,28 +227,38 @@ car.distance_receiver(origin_distance)
 # MQTT Module
 url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds"     # Link to feeds' board of the user account 
 
+# ========== Car Simulation Run and Data Exchange To Dashboard ==========
+# This loop runs continuously to:
+# 1. Update the physics/simulation
+# 2. Check for changes
+# 3. Synchronize with the cloud
+
 while True:
     # Power On
     if (car.engine_status == 1):
-        # Time durations for the previous car run:
-        car.time_elapsed = 20
-        # Update car data
-        car.update()
-        # Forming data to public:
+        
+        car.time_elapsed = 20     # Time durations from previous car's status update
+        
+        car.update()              # Update car's status
+        
+        # Prepare data to upload the Adafruit Dashboard:
         feeds["AC_Adjust"] = car.exp_AC
-        #print(f"AC temperature: {car.exp_AC}")
         feeds["Engine_Status"] = car.engine_status
         feeds["Speed_sensor"] = car.speed()
         feeds["ECT_sensor"] = car.ECT()
         feeds["Fuel_sensor"] = car.fuel()
         feeds["Distance"] = car.totall_distance()
         feeds["Cabin_Temp_sensor"] = car.cabin_temp()
+
+        # Process the DTC list: 
         Raw_car_issue = car.car_issue()
         feeds["Car_problem"] = ", ".join(Raw_car_issue)
         if "None" in Raw_car_issue:
             feeds["Problem_indicator"] = 0
         else:
             feeds["Problem_indicator"] = 1
+
+        # Checking against dashboard data to decide what to publish
         check = feeds.copy()
         a = query_latest_data(url_feeds, raw = True)
         for info_feed in a:
@@ -259,17 +270,18 @@ while True:
                     elif isinstance(value, str) and value.replace('.', '', 1).isdigit():
                             value = float(value) 
                     check[key] = value   
-        # Print current data
+        
+        # Publishes data if car's status (local) differs from dashboard (remote)
         check_rep(feeds, check)
         print("------------------------------------------------------------")
 
     # Power Off
     elif (car.speed() > 0):
-        # Time durations for the previous car run:
+        
         car.time_elapsed = 20
-        # Update car data
-        car.update()
-        # Forming data to public:
+        car.update()                # Update car data
+        
+        # Prepare pulished car's data
         feeds["AC_Adjust"] = car.exp_AC
         feeds["Engine_Status"] = car.engine_status
         feeds["Speed_sensor"] = car.speed()
@@ -300,9 +312,9 @@ while True:
         print("------------------------------------------------------------") 
     else:
         break
-    time.sleep(15)
+    time.sleep(15)            # Wait 15 seconds before the next update
 
-# Reset the default value and Disconnect to Dashboard:
+# Reset sensors's value and disconnect to Dashboard:
 client.publish("AC_Adjust",0)
 client.publish("Cabin_Temp_sensor",0)
 client.publish("Car_problem","None")
