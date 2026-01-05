@@ -9,7 +9,7 @@ import requests
 # The 'Car' class encapsulates the state (speed, fuel, temp) and behavior of a physical car.
 class Car:
     def __init__(self):
-        self.time_elapsed = 0                                # Time duration fo
+        self.time_elapsed = 0                                # Time duration for next car's status updating
         self.engine_status = 0
         self.speed_sensor = 0
         self.exp_speed = random.randint(0, 240)
