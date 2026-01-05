@@ -203,11 +203,11 @@ client.loop_background()
 # 1. Python Module
 car = Car()
 car.turn_on()
-origin_distance = float(query_latest_data("https://io.adafruit.com/api/v2/Steve12345/feeds/distance", raw = False)) # Link trong () mọi người thay thế bằng API feed "Distance" của mọi người nha
+origin_distance = float(query_latest_data("https://io.adafruit.com/api/v2/Steve12345/feeds/distance", raw = False))
 car.distance_receiver(origin_distance)
 
 # 2. MQTT Module
-url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds" # Link này mọi người cùng dùng link feed "Distance" của mọi người nhưng xóa "/distance" ở sau đi nha 
+url_feeds = "https://io.adafruit.com/api/v2/Steve12345/feeds" 
 
 while True:
     # Power On
